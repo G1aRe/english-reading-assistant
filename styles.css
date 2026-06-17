@@ -108,12 +108,12 @@ body {
 }
 
 .btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     min-height: 48px;
-    padding: 12px 16px;
+    padding: 12px 18px;
     border: none;
     border-radius: 12px;
     font-family: var(--font-main);
@@ -123,6 +123,8 @@ body {
     transition: all var(--transition);
     user-select: none;
     touch-action: manipulation;
+    white-space: nowrap;
+    overflow: visible;
 }
 
 .btn:disabled {
@@ -136,50 +138,51 @@ body {
 
 .btn-icon {
     font-size: 18px;
-}
-
-.btn-primary {
-    background: var(--primary);
-    color: white;
-}
-
-.btn-primary:not(:disabled):active {
-    background: var(--primary-hover);
-}
-
-.btn-secondary {
-    background: #64748B;
-    color: white;
-}
-
-.btn-secondary:not(:disabled):active {
-    background: #475569;
-}
-
-.btn-outline {
-    background: var(--surface);
-    color: var(--text);
-    border: 1.5px solid var(--border);
-}
-
-.btn-outline:not(:disabled):active {
-    background: var(--background);
-    border-color: var(--text-light);
+    line-height: 1;
+    flex-shrink: 0;
 }
 
 .btn-text {
-    background: transparent;
-    color: var(--primary);
-    min-height: 40px;
-    padding: 8px 12px;
+    line-height: 1.2;
+    flex-shrink: 0;
 }
 
-.btn-text:not(:disabled):active {
-    background: var(--highlight);
+.btn-primary {
+    background-color: var(--primary);
+    color: #FFFFFF;
+    border: 2px solid var(--primary);
+}
+
+.btn-primary:not(:disabled):active {
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
 }
 
 .btn-primary.playing {
-    background: var(--secondary);
+    background-color: var(--secondary);
+    border-color: var(--secondary);
+}
+
+.btn-secondary {
+    background-color: #64748B;
+    color: #FFFFFF;
+    border: 2px solid #64748B;
+}
+
+.btn-secondary:not(:disabled):active {
+    background-color: #475569;
+    border-color: #475569;
+}
+
+.btn-outline {
+    background-color: var(--surface);
+    color: var(--text);
+    border: 2px solid var(--border);
+}
+
+.btn-outline:not(:disabled):active {
+    background-color: var(--background);
+    border-color: var(--text-light);
 }
 
 .reading-view {
