@@ -22,38 +22,24 @@
         </header>
 
         <main class="main-content">
-            <section class="input-section">
-                <div class="section-header">
-                    <h2>📋 粘贴英文文章</h2>
-                    <div class="stats" id="stats"></div>
-                </div>
-                <textarea
-                    id="articleInput"
-                    class="article-input"
-                    placeholder="在这里粘贴英文文章..."
-                    autocapitalize="off"
-                    autocomplete="off"
-                    autocorrect="off"
-                    spellcheck="false"
-                ></textarea>
-                <button id="startReadingBtn" class="btn btn-primary-outline" style="display: none;">
-                    <span class="btn-icon">📖</span>
-                    <span class="btn-text">开始阅读</span>
+            <div class="toolbar">
+                <button id="pasteBtn" class="btn btn-primary">
+                    <span class="btn-icon">📋</span>
+                    <span class="btn-text">粘贴文章</span>
                 </button>
-            </section>
+                <button id="clearBtn" class="btn btn-outline">
+                    <span class="btn-icon">�</span>
+                    <span class="btn-text">清空</span>
+                </button>
+            </div>
 
-            <section class="reading-view" id="readingView" style="display: none;">
-                <div class="reading-view-header">
-                    <button id="backToEditBtn" class="btn btn-text">
-                        <span class="btn-icon">←</span>
-                        <span class="btn-text">返回编辑</span>
-                    </button>
-                    <button id="editContentBtn" class="btn btn-text">
-                        <span class="btn-icon">✏️</span>
-                        <span class="btn-text">编辑</span>
-                    </button>
+            <section class="reading-view" id="readingView">
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon">📝</div>
+                    <h3>开始阅读</h3>
+                    <p>点击上方"粘贴文章"按钮<br>或直接粘贴英文文章到这里</p>
                 </div>
-                <div class="article-content" id="articleContent"></div>
+                <div class="article-content" id="articleContent" contenteditable="true"></div>
             </section>
 
             <section class="control-panel" id="controlPanel" style="display: none;">
@@ -103,6 +89,8 @@
                 <span class="shortcut"><kbd>双击</kbd> 查词</span>
             </div>
         </footer>
+
+        <textarea id="hiddenInput" class="hidden-input"></textarea>
     </div>
 
     <script src="app.js"></script>

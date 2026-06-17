@@ -13,13 +13,10 @@
     };
 
     const elements = {
-        articleInput: document.getElementById('articleInput'),
-        stats: document.getElementById('stats'),
-        startReadingBtn: document.getElementById('startReadingBtn'),
-        readingView: document.getElementById('readingView'),
         articleContent: document.getElementById('articleContent'),
-        backToEditBtn: document.getElementById('backToEditBtn'),
-        editContentBtn: document.getElementById('editContentBtn'),
+        emptyState: document.getElementById('emptyState'),
+        pasteBtn: document.getElementById('pasteBtn'),
+        clearBtn: document.getElementById('clearBtn'),
         controlPanel: document.getElementById('controlPanel'),
         readAloudBtn: document.getElementById('readAloudBtn'),
         pauseBtn: document.getElementById('pauseBtn'),
@@ -29,7 +26,8 @@
         progressFill: document.getElementById('progressFill'),
         progressText: document.getElementById('progressText'),
         wordInfoPanel: document.getElementById('wordInfoPanel'),
-        wordInfoContent: document.getElementById('wordInfoContent')
+        wordInfoContent: document.getElementById('wordInfoContent'),
+        hiddenInput: document.getElementById('hiddenInput')
     };
 
     const FREE_DICTIONARY_API = 'https://api.dictionaryapi.dev/api/v2/entries/en';
@@ -37,22 +35,21 @@
     function init() {
         state.speechSynthesis = window.speechSynthesis;
         bindEvents();
-        updateStats();
         checkBrowserCompatibility();
+        loadCacheFromStorage();
     }
 
     function bindEvents() {
-        elements.articleInput.addEventListener('input', handleArticleInput);
-        elements.articleInput.addEventListener('dblclick', handleDoubleClick);
-        elements.articleInput.addEventListener('mouseup', handleTextSelection);
-        elements.startReadingBtn.addEventListener('click', startReadingView);
-        elements.backToEditBtn.addEventListener('click', backToEdit);
-        elements.editContentBtn.addEventListener('click', backToEdit);
+        elements.pasteBtn.addEventListener('click', handlePaste);
+        elements.clearBtn.addEventListener('click', handleClear);
+        elements.articleContent.addEventListener('input', handleContentInput);
+        elements.articleContent.addEventListener('mouseup', handleTextSelection);
+        elements.articleContent.addEventListener('touchend', handleTextSelection);
+        elements.articleContent.addEventListener('dblclick', handleDoubleClick);
         elements.readAloudBtn.addEventListener('click', toggleReadAloud);
         elements.pauseBtn.addEventListener('click', togglePause);
         elements.stopBtn.addEventListener('click', stopReading);
         elements.speedSelect.addEventListener('change', updateSpeed);
-
         document.addEventListener('keydown', handleKeyboard);
     }
 
@@ -62,72 +59,78 @@
         }
     }
 
-    function handleArticleInput() {
-        state.articleText = elements.articleInput.value;
-        updateStats();
-        updateStartButton();
-    }
+    function handlePaste() {
+        elements.hiddenInput.focus();
+        elements.hiddenInput.select();
 
-    function updateStats() {
-        const text = state.articleText;
-        if (!text.trim()) {
-            elements.stats.innerHTML = '';
-            return;
+        document.execCommand('paste');
+        const pastedText = elements.hiddenInput.value;
+        elements.hiddenInput.value = '';
+
+        if (pastedText.trim()) {
+            setArticleContent(pastedText);
+        } else {
+            showNotification('剪贴板为空', 'info');
         }
-
-        const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
-        const characters = text.length;
-        const readingTime = Math.ceil(words / 200);
-
-        elements.stats.innerHTML = `
-            <span>${words} 词</span>
-            <span>${readingTime} 分钟</span>
-        `;
     }
 
-    function updateStartButton() {
-        const hasContent = state.articleText.trim().length > 0;
-        elements.startReadingBtn.style.display = hasContent ? 'flex' : 'none';
-        elements.readAloudBtn.disabled = !hasContent;
-        elements.stopBtn.disabled = true;
-    }
-
-    function startReadingView() {
-        const text = state.articleText.trim();
-        if (!text) return;
-
-        elements.articleContent.textContent = text;
-        elements.readingView.style.display = 'block';
-        elements.controlPanel.style.display = 'block';
-        elements.startReadingBtn.style.display = 'none';
-        elements.articleInput.style.display = 'none';
-
-        updateReadAloudButton();
-    }
-
-    function backToEdit() {
+    function handleClear() {
         stopReading();
-        elements.readingView.style.display = 'none';
+        elements.articleContent.textContent = '';
+        state.articleText = '';
+        showEmptyState();
         elements.controlPanel.style.display = 'none';
-        elements.startReadingBtn.style.display = 'flex';
-        elements.articleInput.style.display = 'block';
         elements.progressContainer.style.display = 'none';
         elements.progressFill.style.width = '0%';
         elements.progressText.textContent = '0%';
+        elements.wordInfoContent.innerHTML = '<p class="word-info-empty">👆 在上方选中或双击单词<br>即可查看音标和发音</p>';
+    }
+
+    function setArticleContent(text) {
+        elements.articleContent.textContent = text;
+        state.articleText = text;
+        hideEmptyState();
+        elements.controlPanel.style.display = 'block';
+        updateButtonStates();
+    }
+
+    function handleContentInput() {
+        state.articleText = elements.articleContent.textContent;
+
+        if (!state.articleText.trim()) {
+            showEmptyState();
+            elements.controlPanel.style.display = 'none';
+        } else {
+            hideEmptyState();
+            elements.controlPanel.style.display = 'block';
+        }
+        updateButtonStates();
+    }
+
+    function showEmptyState() {
+        elements.emptyState.style.display = 'flex';
+    }
+
+    function hideEmptyState() {
+        elements.emptyState.style.display = 'none';
     }
 
     function handleTextSelection(event) {
-        const selectedText = getSelectedText();
-        if (selectedText && isEnglishWord(selectedText)) {
-            lookupWord(selectedText.trim());
-        }
+        setTimeout(() => {
+            const selectedText = getSelectedText();
+            if (selectedText && isEnglishWord(selectedText)) {
+                lookupWord(selectedText.trim());
+            }
+        }, 50);
     }
 
     function handleDoubleClick(event) {
-        const selectedText = getSelectedText();
-        if (selectedText && isEnglishWord(selectedText)) {
-            lookupWord(selectedText.trim());
-        }
+        setTimeout(() => {
+            const selectedText = getSelectedText();
+            if (selectedText && isEnglishWord(selectedText)) {
+                lookupWord(selectedText.trim());
+            }
+        }, 50);
     }
 
     function getSelectedText() {
@@ -295,33 +298,6 @@
         state.speechSynthesis.speak(utterance);
     };
 
-    function speakWordUsingTTS(word) {
-        stopCurrentSpeech();
-
-        const utterance = new SpeechSynthesisUtterance(word);
-        utterance.lang = 'en-US';
-        utterance.rate = parseFloat(elements.speedSelect.value);
-
-        const phonetic = document.querySelector('.phonetic');
-        if (phonetic) {
-            phonetic.classList.add('playing');
-        }
-
-        utterance.onend = () => {
-            if (phonetic) {
-                phonetic.classList.remove('playing');
-            }
-        };
-
-        utterance.onerror = () => {
-            if (phonetic) {
-                phonetic.classList.remove('playing');
-            }
-        };
-
-        state.speechSynthesis.speak(utterance);
-    }
-
     function toggleReadAloud() {
         if (state.isPlaying) {
             stopReading();
@@ -453,6 +429,7 @@
         elements.readAloudBtn.disabled = !hasContent;
         elements.stopBtn.disabled = !state.isPlaying;
         elements.pauseBtn.disabled = !state.isPlaying;
+        elements.clearBtn.disabled = !hasContent;
     }
 
     function updateReadAloudButton() {
@@ -478,23 +455,22 @@
     }
 
     function updateSpeed() {
-        // Speed will be applied to next utterance
     }
 
     function handleKeyboard(event) {
         if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
             event.preventDefault();
             if (!elements.readAloudBtn.disabled) {
-                if (elements.readingView.style.display === 'none') {
-                    startReadingView();
-                }
                 toggleReadAloud();
             }
         }
 
-        if ((event.ctrlKey || event.metaKey) && event.key === 'r') {
-            event.preventDefault();
-            backToEdit();
+        if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+            setTimeout(() => {
+                if (!state.articleText.trim()) {
+                    handlePaste();
+                }
+            }, 100);
         }
     }
 
@@ -521,6 +497,5 @@
         console.log(`[${type}] ${message}`);
     }
 
-    loadCacheFromStorage();
     init();
 })();
