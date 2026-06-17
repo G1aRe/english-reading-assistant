@@ -7,8 +7,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#F8FAFC">
-    <meta name="description" content="英文朗读辅助应用 - 选中单词即查音标，听发音，全文朗读">
-    <title>English Reading Assistant</title>
+    <meta name="description" content="英文朗读辅助应用 - 选中单词查音标，点击听发音，全文朗读">
+    <title>英文朗读助手</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -18,29 +18,47 @@
                 <span class="logo-icon">📖</span>
                 <h1>英文朗读助手</h1>
             </div>
-            <p class="subtitle">选中单词查音标 · 点击听发音 · 全文朗读</p>
+            <p class="subtitle">粘贴文章 · 选词查音标 · 全文朗读</p>
         </header>
 
         <main class="main-content">
             <section class="input-section">
                 <div class="section-header">
-                    <h2>粘贴英文文章</h2>
+                    <h2>📋 粘贴英文文章</h2>
                     <div class="stats" id="stats"></div>
                 </div>
                 <textarea
                     id="articleInput"
                     class="article-input"
-                    placeholder="在此粘贴英文文章，然后选中单词查看音标..."
+                    placeholder="在这里粘贴英文文章..."
                     autocapitalize="off"
                     autocomplete="off"
                     autocorrect="off"
                     spellcheck="false"
                 ></textarea>
+                <button id="startReadingBtn" class="btn btn-primary-outline" style="display: none;">
+                    <span class="btn-icon">📖</span>
+                    <span class="btn-text">开始阅读</span>
+                </button>
             </section>
 
-            <section class="control-panel">
+            <section class="reading-view" id="readingView" style="display: none;">
+                <div class="reading-view-header">
+                    <button id="backToEditBtn" class="btn btn-text">
+                        <span class="btn-icon">←</span>
+                        <span class="btn-text">返回编辑</span>
+                    </button>
+                    <button id="editContentBtn" class="btn btn-text">
+                        <span class="btn-icon">✏️</span>
+                        <span class="btn-text">编辑</span>
+                    </button>
+                </div>
+                <div class="article-content" id="articleContent"></div>
+            </section>
+
+            <section class="control-panel" id="controlPanel" style="display: none;">
                 <div class="control-buttons">
-                    <button id="readAloudBtn" class="btn btn-primary" disabled>
+                    <button id="readAloudBtn" class="btn btn-primary">
                         <span class="btn-icon">🔊</span>
                         <span class="btn-text">全文朗读</span>
                     </button>
@@ -48,9 +66,9 @@
                         <span class="btn-icon">⏸</span>
                         <span class="btn-text">暂停</span>
                     </button>
-                    <button id="resetBtn" class="btn btn-outline" disabled>
-                        <span class="btn-icon">🔄</span>
-                        <span class="btn-text">重置</span>
+                    <button id="stopBtn" class="btn btn-outline" disabled>
+                        <span class="btn-icon">⏹</span>
+                        <span class="btn-text">停止</span>
                     </button>
                 </div>
                 <div class="speed-control">
@@ -74,16 +92,8 @@
 
             <section class="word-info-panel" id="wordInfoPanel">
                 <div class="word-info-content" id="wordInfoContent">
-                    <p class="word-info-empty">👆 在文章中选中或双击单词<br>即可查看音标和发音</p>
+                    <p class="word-info-empty">👆 在上方选中或双击单词<br>即可查看音标和发音</p>
                 </div>
-            </section>
-
-            <section class="reading-section" id="readingSection">
-                <div class="reading-header">
-                    <h2>正在朗读...</h2>
-                    <button id="closeReadingBtn" class="btn-close" aria-label="关闭朗读面板">×</button>
-                </div>
-                <div class="reading-content" id="readingContent"></div>
             </section>
         </main>
 
@@ -91,7 +101,6 @@
             <div class="shortcuts">
                 <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> 朗读</span>
                 <span class="shortcut"><kbd>双击</kbd> 查词</span>
-                <span class="shortcut"><kbd>ESC</kbd> 关闭</span>
             </div>
         </footer>
     </div>

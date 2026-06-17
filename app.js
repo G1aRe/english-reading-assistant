@@ -15,19 +15,21 @@
     const elements = {
         articleInput: document.getElementById('articleInput'),
         stats: document.getElementById('stats'),
+        startReadingBtn: document.getElementById('startReadingBtn'),
+        readingView: document.getElementById('readingView'),
+        articleContent: document.getElementById('articleContent'),
+        backToEditBtn: document.getElementById('backToEditBtn'),
+        editContentBtn: document.getElementById('editContentBtn'),
+        controlPanel: document.getElementById('controlPanel'),
         readAloudBtn: document.getElementById('readAloudBtn'),
         pauseBtn: document.getElementById('pauseBtn'),
-        resetBtn: document.getElementById('resetBtn'),
+        stopBtn: document.getElementById('stopBtn'),
         speedSelect: document.getElementById('speedSelect'),
         progressContainer: document.getElementById('progressContainer'),
         progressFill: document.getElementById('progressFill'),
         progressText: document.getElementById('progressText'),
         wordInfoPanel: document.getElementById('wordInfoPanel'),
-        wordInfoContent: document.getElementById('wordInfoContent'),
-        readingSection: document.getElementById('readingSection'),
-        readingContent: document.getElementById('readingContent'),
-        closeReadingBtn: document.getElementById('closeReadingBtn'),
-        tooltip: document.getElementById('tooltip')
+        wordInfoContent: document.getElementById('wordInfoContent')
     };
 
     const FREE_DICTIONARY_API = 'https://api.dictionaryapi.dev/api/v2/entries/en';
@@ -41,16 +43,17 @@
 
     function bindEvents() {
         elements.articleInput.addEventListener('input', handleArticleInput);
-        elements.articleInput.addEventListener('mouseup', handleTextSelection);
         elements.articleInput.addEventListener('dblclick', handleDoubleClick);
+        elements.articleInput.addEventListener('mouseup', handleTextSelection);
+        elements.startReadingBtn.addEventListener('click', startReadingView);
+        elements.backToEditBtn.addEventListener('click', backToEdit);
+        elements.editContentBtn.addEventListener('click', backToEdit);
         elements.readAloudBtn.addEventListener('click', toggleReadAloud);
         elements.pauseBtn.addEventListener('click', togglePause);
-        elements.resetBtn.addEventListener('click', resetAll);
+        elements.stopBtn.addEventListener('click', stopReading);
         elements.speedSelect.addEventListener('change', updateSpeed);
-        elements.closeReadingBtn.addEventListener('click', closeReadingSection);
 
         document.addEventListener('keydown', handleKeyboard);
-        document.addEventListener('click', handleOutsideClick);
     }
 
     function checkBrowserCompatibility() {
@@ -62,7 +65,7 @@
     function handleArticleInput() {
         state.articleText = elements.articleInput.value;
         updateStats();
-        updateButtonStates();
+        updateStartButton();
     }
 
     function updateStats() {
@@ -77,16 +80,40 @@
         const readingTime = Math.ceil(words / 200);
 
         elements.stats.innerHTML = `
-            <span>${words} 单词</span>
-            <span>${characters} 字符</span>
-            <span>约 ${readingTime} 分钟</span>
+            <span>${words} 词</span>
+            <span>${readingTime} 分钟</span>
         `;
     }
 
-    function updateButtonStates() {
+    function updateStartButton() {
         const hasContent = state.articleText.trim().length > 0;
+        elements.startReadingBtn.style.display = hasContent ? 'flex' : 'none';
         elements.readAloudBtn.disabled = !hasContent;
-        elements.resetBtn.disabled = !hasContent || (!state.isPlaying && !state.isPaused);
+        elements.stopBtn.disabled = true;
+    }
+
+    function startReadingView() {
+        const text = state.articleText.trim();
+        if (!text) return;
+
+        elements.articleContent.textContent = text;
+        elements.readingView.style.display = 'block';
+        elements.controlPanel.style.display = 'block';
+        elements.startReadingBtn.style.display = 'none';
+        elements.articleInput.style.display = 'none';
+
+        updateReadAloudButton();
+    }
+
+    function backToEdit() {
+        stopReading();
+        elements.readingView.style.display = 'none';
+        elements.controlPanel.style.display = 'none';
+        elements.startReadingBtn.style.display = 'flex';
+        elements.articleInput.style.display = 'block';
+        elements.progressContainer.style.display = 'none';
+        elements.progressFill.style.width = '0%';
+        elements.progressText.textContent = '0%';
     }
 
     function handleTextSelection(event) {
@@ -187,7 +214,11 @@
                     <button class="play-btn" onclick="playWordAudio('${wordData.word}', '${wordData.audioUrl}')">
                         🔊
                     </button>
-                ` : '<span style="font-size: 13px; color: var(--text-light);">（无发音）</span>'}
+                ` : `
+                    <button class="play-btn" onclick="playWordAudioTTS('${wordData.word}')">
+                        🔊
+                    </button>
+                `}
             </div>
             <div class="word-source">来源: ${wordData.source}</div>
         `;
@@ -196,8 +227,8 @@
     function displayWordError(word, message) {
         elements.wordInfoContent.innerHTML = `
             <div class="word-error">
-                <p>无法找到单词 "${word}" 的音标</p>
-                <p style="font-size: 12px; margin-top: 4px;">${message}</p>
+                <p>无法找到 "${word}" 的音标</p>
+                <p style="font-size: 12px; margin-top: 4px; color: var(--text-light);">请检查拼写是否正确</p>
                 <button class="retry-btn" onclick="lookupWord('${word}')">重试</button>
             </div>
         `;
@@ -205,7 +236,7 @@
 
     window.playWordAudio = function(word, audioUrl) {
         if (!audioUrl) {
-            speakWordUsingTTS(word);
+            playWordAudioTTS(word);
             return;
         }
 
@@ -223,7 +254,7 @@
 
         audio.play().catch(error => {
             console.log('Audio playback failed, falling back to TTS:', error);
-            speakWordUsingTTS(word);
+            playWordAudioTTS(word);
         });
 
         audio.onended = () => {
@@ -235,6 +266,33 @@
                 phonetic.classList.remove('playing');
             }
         };
+    };
+
+    window.playWordAudioTTS = function(word) {
+        stopCurrentSpeech();
+
+        const utterance = new SpeechSynthesisUtterance(word);
+        utterance.lang = 'en-US';
+        utterance.rate = parseFloat(elements.speedSelect.value);
+
+        const phonetic = document.querySelector('.phonetic');
+        if (phonetic) {
+            phonetic.classList.add('playing');
+        }
+
+        utterance.onend = () => {
+            if (phonetic) {
+                phonetic.classList.remove('playing');
+            }
+        };
+
+        utterance.onerror = () => {
+            if (phonetic) {
+                phonetic.classList.remove('playing');
+            }
+        };
+
+        state.speechSynthesis.speak(utterance);
     };
 
     function speakWordUsingTTS(word) {
@@ -282,7 +340,6 @@
         state.isPaused = false;
 
         elements.progressContainer.style.display = 'flex';
-        showReadingSection();
         updateButtonStates();
         updateReadAloudButton();
 
@@ -293,32 +350,6 @@
         return text.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
     }
 
-    function showReadingSection() {
-        elements.readingSection.classList.add('active');
-        elements.readingContent.innerHTML = state.sentences.map((sentence, index) => `
-            <div class="reading-sentence" data-index="${index}" onclick="speakSentence(${index})">
-                ${escapeHtml(sentence)}
-            </div>
-        `).join('');
-    }
-
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    window.speakSentence = function(index) {
-        if (index >= 0 && index < state.sentences.length) {
-            const wasPlaying = state.isPlaying;
-            if (wasPlaying) {
-                stopReading();
-            }
-            speakText(state.sentences[index]);
-            highlightSentence(index);
-        }
-    };
-
     function readNextSentence() {
         if (!state.isPlaying || state.isPaused) return;
         if (state.currentSentenceIndex >= state.sentences.length) {
@@ -328,7 +359,6 @@
 
         const sentence = state.sentences[state.currentSentenceIndex];
         speakText(sentence);
-        highlightSentence(state.currentSentenceIndex);
         updateProgress();
     }
 
@@ -360,21 +390,6 @@
     function stopCurrentSpeech() {
         if (state.speechSynthesis) {
             state.speechSynthesis.cancel();
-        }
-    }
-
-    function highlightSentence(index) {
-        document.querySelectorAll('.reading-sentence').forEach((el, i) => {
-            el.classList.remove('active');
-            if (i < index) {
-                el.classList.add('completed');
-            }
-        });
-
-        const currentEl = document.querySelector(`.reading-sentence[data-index="${index}"]`);
-        if (currentEl) {
-            currentEl.classList.add('active');
-            currentEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     }
 
@@ -431,32 +446,12 @@
         updateButtonStates();
         updateReadAloudButton();
         elements.pauseBtn.disabled = true;
-
-        document.querySelectorAll('.reading-sentence').forEach(el => {
-            el.classList.remove('active');
-            el.classList.add('completed');
-        });
-    }
-
-    function resetAll() {
-        stopReading();
-        state.currentSentenceIndex = 0;
-        state.sentences = [];
-        elements.progressContainer.style.display = 'none';
-        elements.progressFill.style.width = '0%';
-        elements.progressText.textContent = '0%';
-        elements.readingSection.classList.remove('active');
-        elements.readingContent.innerHTML = '';
-        elements.wordInfoContent.innerHTML = `
-            <p class="word-info-empty">👆 在文章中选中或双击单词<br>即可查看音标和发音</p>
-        `;
-        updateButtonStates();
     }
 
     function updateButtonStates() {
         const hasContent = state.articleText.trim().length > 0;
         elements.readAloudBtn.disabled = !hasContent;
-        elements.resetBtn.disabled = !hasContent;
+        elements.stopBtn.disabled = !state.isPlaying;
         elements.pauseBtn.disabled = !state.isPlaying;
     }
 
@@ -486,44 +481,20 @@
         // Speed will be applied to next utterance
     }
 
-    function closeReadingSection() {
-        if (state.isPlaying) {
-            stopReading();
-        }
-        elements.readingSection.classList.remove('active');
-    }
-
     function handleKeyboard(event) {
-        if (event.key === 'Escape') {
-            closeReadingSection();
-        }
-
         if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
             event.preventDefault();
             if (!elements.readAloudBtn.disabled) {
+                if (elements.readingView.style.display === 'none') {
+                    startReadingView();
+                }
                 toggleReadAloud();
             }
         }
 
         if ((event.ctrlKey || event.metaKey) && event.key === 'r') {
             event.preventDefault();
-            if (!elements.resetBtn.disabled) {
-                resetAll();
-            }
-        }
-
-        if ((event.ctrlKey || event.metaKey) && event.key === ' ') {
-            event.preventDefault();
-            if (state.isPlaying && !elements.pauseBtn.disabled) {
-                togglePause();
-            }
-        }
-    }
-
-    function handleOutsideClick(event) {
-        if (!elements.wordInfoPanel.contains(event.target) &&
-            !event.target.closest('.reading-sentence')) {
-            // Optional: clear selection
+            backToEdit();
         }
     }
 
