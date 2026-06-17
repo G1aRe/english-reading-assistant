@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Reading Assistant - 英文朗读辅助</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">📖</span>
+                <h1>English Reading Assistant</h1>
+            </div>
+            <p class="subtitle">英文朗读辅助 - 选中单词即查音标，听发音</p>
+        </header>
+
+        <main class="main-content">
+            <section class="input-section">
+                <div class="section-header">
+                    <h2>📝 粘贴英文文章</h2>
+                    <div class="stats" id="stats"></div>
+                </div>
+                <textarea
+                    id="articleInput"
+                    class="article-input"
+                    placeholder="在此粘贴英文文章...
+
+例如：
+The ephemeral nature of cherry blossoms makes them even more precious. Each spring, millions of people gather to witness the delicate pink petals that grace the parks and temples throughout Japan. This fleeting beauty reminds us to appreciate the present moment."
+
+                ></textarea>
+            </section>
+
+            <section class="control-panel">
+                <div class="control-buttons">
+                    <button id="readAloudBtn" class="btn btn-primary" disabled>
+                        <span class="btn-icon">🔊</span>
+                        <span class="btn-text">全文朗读</span>
+                    </button>
+                    <button id="pauseBtn" class="btn btn-secondary" disabled>
+                        <span class="btn-icon">⏸</span>
+                        <span class="btn-text">暂停</span>
+                    </button>
+                    <button id="resetBtn" class="btn btn-outline" disabled>
+                        <span class="btn-icon">🔄</span>
+                        <span class="btn-text">重置</span>
+                    </button>
+                    <div class="speed-control">
+                        <label for="speedSelect">语速:</label>
+                        <select id="speedSelect" class="speed-select">
+                            <option value="0.5">0.5x</option>
+                            <option value="0.75">0.75x</option>
+                            <option value="1" selected>1x</option>
+                            <option value="1.25">1.25x</option>
+                            <option value="1.5">1.5x</option>
+                            <option value="2">2x</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <span class="progress-text" id="progressText">0%</span>
+                </div>
+            </section>
+
+            <section class="word-info-panel" id="wordInfoPanel">
+                <div class="word-info-content" id="wordInfoContent">
+                    <p class="word-info-empty">👆 选中文章中的单词即可查看音标和发音</p>
+                </div>
+            </section>
+
+            <section class="reading-section" id="readingSection">
+                <div class="reading-header">
+                    <h2>📖 文章朗读</h2>
+                    <button id="closeReadingBtn" class="btn-close">×</button>
+                </div>
+                <div class="reading-content" id="readingContent"></div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <div class="shortcuts">
+                <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> 全文朗读</span>
+                <span class="shortcut"><kbd>双击</kbd> 选中查词</span>
+                <span class="shortcut"><kbd>ESC</kbd> 关闭面板</span>
+            </div>
+        </footer>
+
+        <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "english-reading-assistant",
+  "version": "1.0.0",
+  "description": "英文朗读辅助应用 - 选中单词即查音标，听发音",
+  "scripts": {
+    "build": "echo 'Build complete'",
+    "dev": "python -m http.server 8080"
+  },
+  "keywords": ["english", "reading", "learning", "pronunciation", "TTS"],
+  "author": "",
+  "license": "MIT"
+}
