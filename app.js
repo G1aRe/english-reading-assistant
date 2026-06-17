@@ -19,6 +19,7 @@
         pauseBtn: document.getElementById('pauseBtn'),
         resetBtn: document.getElementById('resetBtn'),
         speedSelect: document.getElementById('speedSelect'),
+        progressContainer: document.getElementById('progressContainer'),
         progressFill: document.getElementById('progressFill'),
         progressText: document.getElementById('progressText'),
         wordInfoPanel: document.getElementById('wordInfoPanel'),
@@ -280,6 +281,7 @@
         state.isPlaying = true;
         state.isPaused = false;
 
+        elements.progressContainer.style.display = 'flex';
         showReadingSection();
         updateButtonStates();
         updateReadAloudButton();
@@ -440,12 +442,13 @@
         stopReading();
         state.currentSentenceIndex = 0;
         state.sentences = [];
+        elements.progressContainer.style.display = 'none';
         elements.progressFill.style.width = '0%';
         elements.progressText.textContent = '0%';
         elements.readingSection.classList.remove('active');
         elements.readingContent.innerHTML = '';
         elements.wordInfoContent.innerHTML = `
-            <p class="word-info-empty">👆 选中文章中的单词即可查看音标和发音</p>
+            <p class="word-info-empty">👆 在文章中选中或双击单词<br>即可查看音标和发音</p>
         `;
         updateButtonStates();
     }
