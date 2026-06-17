@@ -59,18 +59,31 @@
         }
     }
 
-    function handlePaste() {
-        elements.hiddenInput.focus();
-        elements.hiddenInput.select();
-
-        document.execCommand('paste');
-        const pastedText = elements.hiddenInput.value;
-        elements.hiddenInput.value = '';
-
-        if (pastedText.trim()) {
-            setArticleContent(pastedText);
+    async function handlePaste() {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text.trim()) {
+                    setArticleContent(text);
+                } else {
+                    showNotification('剪贴板为空', 'info');
+                }
+            } catch (err) {
+                showNotification('无法访问剪贴板，请直接粘贴到阅读区域', 'error');
+            }
         } else {
-            showNotification('剪贴板为空', 'info');
+            elements.hiddenInput.focus();
+            elements.hiddenInput.select();
+
+            const successful = document.execCommand('paste');
+            const pastedText = elements.hiddenInput.value;
+            elements.hiddenInput.value = '';
+
+            if (pastedText.trim()) {
+                setArticleContent(pastedText);
+            } else {
+                showNotification('剪贴板为空，请直接粘贴到阅读区域', 'info');
+            }
         }
     }
 
