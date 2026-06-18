@@ -9,7 +9,8 @@
         isPaused: false,
         speechSynthesis: null,
         currentUtterance: null,
-        wordCache: {}
+        wordCache: {},
+        preferredVoice: null
     };
 
     const elements = {
@@ -31,12 +32,22 @@
     };
 
     const FREE_DICTIONARY_API = 'https://api.dictionaryapi.dev/api/v2/entries/en';
+    const TRANSLATION_API = 'https://api.mymemory.translated.net/get';
 
     function init() {
         state.speechSynthesis = window.speechSynthesis;
         bindEvents();
         checkBrowserCompatibility();
         loadCacheFromStorage();
+
+        if (state.speechSynthesis.onvoiceschanged !== undefined) {
+            state.speechSynthesis.onvoiceschanged = () => {
+                state.preferredVoice = getPreferredVoice();
+            };
+        }
+        setTimeout(() => {
+            state.preferredVoice = getPreferredVoice();
+        }, 100);
     }
 
     function bindEvents() {
@@ -166,13 +177,55 @@
         }
 
         try {
-            const response = await fetch(`${FREE_DICTIONARY_API}/${normalizedWord}`);
-            if (!response.ok) {
-                throw new Error('Word not found');
+            const dictResponse = await fetch(`${FREE_DICTIONARY_API}/${normalizedWord}`);
+
+            let phonetic = '';
+            let audioUrl = '';
+            let englishMeanings = [];
+            let chineseMeanings = [];
+
+            if (dictResponse.ok) {
+                const dictData = await dictResponse.json();
+                const parsed = parseDictionaryApiResponse(dictData, normalizedWord);
+                phonetic = parsed.phonetic;
+                audioUrl = parsed.audioUrl;
+                englishMeanings = parsed.meanings;
+
+                const englishDefinitions = englishMeanings.map(m => m.definition).slice(0, 3);
+
+                const transPromises = englishDefinitions.map(def =>
+                    fetch(`${TRANSLATION_API}?q=${encodeURIComponent(def)}&langpair=en|zh-CN`)
+                );
+
+                const transResponses = await Promise.all(transPromises);
+                for (const res of transResponses) {
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.responseStatus === 200 && data.responseData) {
+                            chineseMeanings.push(data.responseData.translatedText);
+                        }
+                    }
+                }
             }
 
-            const data = await response.json();
-            const wordData = parseDictionaryApiResponse(data, normalizedWord);
+            if (chineseMeanings.length === 0) {
+                const mainTransResponse = await fetch(`${TRANSLATION_API}?q=${encodeURIComponent(normalizedWord)}&langpair=en|zh-CN`);
+                if (mainTransResponse.ok) {
+                    const data = await mainTransResponse.json();
+                    if (data.responseStatus === 200 && data.responseData) {
+                        chineseMeanings.push(data.responseData.translatedText);
+                    }
+                }
+            }
+
+            const wordData = {
+                word: normalizedWord,
+                phonetic: phonetic,
+                audioUrl: audioUrl,
+                meanings: englishMeanings,
+                chineseMeanings: chineseMeanings,
+                source: 'Free Dictionary API'
+            };
 
             state.wordCache[normalizedWord] = wordData;
             saveCacheToStorage();
@@ -199,11 +252,24 @@
             }
         }
 
+        const meanings = [];
+        if (entry.meanings) {
+            for (const meaning of entry.meanings) {
+                const partOfSpeech = meaning.partOfSpeech || '';
+                const definitions = meaning.definitions || [];
+                for (const def of definitions.slice(0, 2)) {
+                    meanings.push({
+                        partOfSpeech: partOfSpeech,
+                        definition: def.definition
+                    });
+                }
+            }
+        }
+
         return {
-            word: word,
             phonetic: phonetic,
             audioUrl: audioUrl,
-            source: 'Free Dictionary API'
+            meanings: meanings
         };
     }
 
@@ -222,10 +288,9 @@
     function displayWordInfo(wordData) {
         const hasAudio = wordData.audioUrl && wordData.audioUrl.length > 0;
 
-        elements.wordInfoContent.innerHTML = `
+        let html = `
             <div class="word-display">
                 <span class="word-text">${wordData.word}</span>
-                <span class="phonetic">${wordData.phonetic || '无音标'}</span>
                 ${hasAudio ? `
                     <button class="play-btn" onclick="playWordAudio('${wordData.word}', '${wordData.audioUrl}')">
                         🔊
@@ -236,14 +301,39 @@
                     </button>
                 `}
             </div>
-            <div class="word-source">来源: ${wordData.source}</div>
         `;
+
+        if (wordData.chineseMeanings && wordData.chineseMeanings.length > 0) {
+            html += `<div class="chinese-meanings">`;
+            wordData.chineseMeanings.forEach((meaning, index) => {
+                html += `<div class="chinese-meaning-item">
+                    <span class="meaning-number">${index + 1}.</span>
+                    <span class="meaning-text">${meaning}</span>
+                </div>`;
+            });
+            html += `</div>`;
+        }
+
+        if (wordData.meanings && wordData.meanings.length > 0) {
+            html += `<div class="meanings-list">`;
+            for (const m of wordData.meanings.slice(0, 3)) {
+                html += `<div class="meaning-item">
+                    <span class="part-of-speech">${m.partOfSpeech}</span>
+                    <span class="definition">${m.definition}</span>
+                </div>`;
+            }
+            html += `</div>`;
+        }
+
+        html += `<div class="word-source">来源: ${wordData.source}</div>`;
+
+        elements.wordInfoContent.innerHTML = html;
     }
 
     function displayWordError(word, message) {
         elements.wordInfoContent.innerHTML = `
             <div class="word-error">
-                <p>无法找到 "${word}" 的音标</p>
+                <p>无法找到 "${word}" 的含义</p>
                 <p style="font-size: 12px; margin-top: 4px; color: var(--text-light);">请检查拼写是否正确</p>
                 <button class="retry-btn" onclick="lookupWord('${word}')">重试</button>
             </div>
@@ -258,14 +348,10 @@
 
         const audio = new Audio(audioUrl);
         const playBtn = document.querySelector('.play-btn');
-        const phonetic = document.querySelector('.phonetic');
 
         if (playBtn) {
             playBtn.classList.add('playing');
-            playBtn.textContent = '🔊';
-        }
-        if (phonetic) {
-            phonetic.classList.add('playing');
+            playBtn.textContent = '...';
         }
 
         audio.play().catch(error => {
@@ -278,9 +364,6 @@
                 playBtn.classList.remove('playing');
                 playBtn.textContent = '🔊';
             }
-            if (phonetic) {
-                phonetic.classList.remove('playing');
-            }
         };
     };
 
@@ -291,20 +374,27 @@
         utterance.lang = 'en-US';
         utterance.rate = parseFloat(elements.speedSelect.value);
 
-        const phonetic = document.querySelector('.phonetic');
-        if (phonetic) {
-            phonetic.classList.add('playing');
+        if (state.preferredVoice) {
+            utterance.voice = state.preferredVoice;
+        }
+
+        const playBtn = document.querySelector('.play-btn');
+        if (playBtn) {
+            playBtn.classList.add('playing');
+            playBtn.textContent = '...';
         }
 
         utterance.onend = () => {
-            if (phonetic) {
-                phonetic.classList.remove('playing');
+            if (playBtn) {
+                playBtn.classList.remove('playing');
+                playBtn.textContent = '🔊';
             }
         };
 
         utterance.onerror = () => {
-            if (phonetic) {
-                phonetic.classList.remove('playing');
+            if (playBtn) {
+                playBtn.classList.remove('playing');
+                playBtn.textContent = '🔊';
             }
         };
 
@@ -358,6 +448,10 @@
         utterance.lang = 'en-US';
         utterance.rate = parseFloat(elements.speedSelect.value);
 
+        if (state.preferredVoice) {
+            utterance.voice = state.preferredVoice;
+        }
+
         utterance.onend = () => {
             if (state.isPlaying && !state.isPaused) {
                 state.currentSentenceIndex++;
@@ -374,6 +468,31 @@
 
         state.currentUtterance = utterance;
         state.speechSynthesis.speak(utterance);
+    }
+
+    function getPreferredVoice() {
+        const voices = state.speechSynthesis.getVoices();
+        if (!voices || voices.length === 0) return null;
+
+        const englishVoices = voices.filter(v => v.lang.startsWith('en'));
+
+        const preferredNames = [
+            'Google US English',
+            'Microsoft Server Speech Text to Speech Voice (en-US, Eva)',
+            'Samantha',
+            'Daniel',
+            'Karen',
+            'Tom',
+            'Google English (US)',
+            'Microsoft English (US)'
+        ];
+
+        for (const name of preferredNames) {
+            const found = englishVoices.find(v => v.name.includes(name.split(' ')[0]));
+            if (found) return found;
+        }
+
+        return englishVoices[0] || voices[0];
     }
 
     function stopCurrentSpeech() {

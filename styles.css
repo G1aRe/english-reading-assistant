@@ -419,6 +419,66 @@ body {
     color: white;
 }
 
+.chinese-meanings {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.chinese-meaning-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 16px;
+    color: var(--primary);
+    font-weight: 500;
+    padding: 8px 12px;
+    background: var(--highlight);
+    border-radius: 10px;
+    line-height: 1.5;
+}
+
+.meaning-number {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--secondary);
+    min-width: 24px;
+    flex-shrink: 0;
+}
+
+.meaning-text {
+    word-break: break-word;
+}
+
+.meanings-list {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.meaning-item {
+    display: flex;
+    gap: 8px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+}
+
+.part-of-speech {
+    font-weight: 600;
+    color: var(--text-light);
+    font-style: italic;
+    min-width: 50px;
+    flex-shrink: 0;
+}
+
+.definition {
+    color: var(--text);
+    word-break: break-word;
+}
+
 .word-source {
     font-size: 12px;
     color: var(--text-light);
@@ -575,6 +635,10 @@ kbd {
         background: transparent;
         padding: 0;
     }
+
+    .chinese-meaning {
+        font-size: 18px;
+    }
 }
 
 @media (min-width: 1024px) {
@@ -605,6 +669,10 @@ kbd {
 
     .speed-select {
         background: var(--surface);
+    }
+
+    .chinese-meaning {
+        background: rgba(37, 99, 235, 0.2);
     }
 }
 
